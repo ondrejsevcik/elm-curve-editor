@@ -1,26 +1,26 @@
-port module Main exposing (HoverLinesPosition, Model, Msg(..), SvgMouseCoordinate, decodeSvgMouseCoordinate, init, main, onSvgMouseMove, subscriptions, transparentColor, update, view, viewHoverLines, viewPath, viewSvg)
+module Main exposing (..)
 
 import Axis
 import Browser
 import Color
-import Html exposing (Html, button, div, text)
-import Html.Attributes
-import Html.Events exposing (onClick)
+import Html
+import Html.Events as HE
 import Json.Decode as Decode
-import Path exposing (Path)
+import RoastCurve
 import Scale
 import Shape
-import SubPath exposing (SubPath)
-import Svg.Attributes exposing (id)
+import SubPath
+import Svg
 import Svg.Events
 import TypedSvg exposing (circle, g, line, rect, svg)
-import TypedSvg.Attributes exposing (..)
-import TypedSvg.Attributes.InPx exposing (height, width, x, y)
-import TypedSvg.Core exposing (Svg)
-import TypedSvg.Events exposing (..)
-import TypedSvg.Types exposing (..)
+import TypedSvg.Attributes as SvgAttr
+import TypedSvg.Attributes.InPx
+import TypedSvg.Core
+import TypedSvg.Events
+import TypedSvg.Types as SvgTypes
 
 
+main : Program Decode.Value Model Msg
 main =
     Browser.element
         { view = view
@@ -30,68 +30,132 @@ main =
         }
 
 
+subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
 
+type ActiveValue
+    = Selected RoastCurve.Value
+    | Dragging RoastCurve.Value
+    | NoValue
+
+
 init : Decode.Value -> ( Model, Cmd msg )
 init flags =
-    ( { hoverLinesPosition = Nothing
-      , curveValues = generateBeanTemperatureCurve 900000
+    ( { mousePosition = Nothing
+      , curveValues = RoastCurve.newFromDuration 900000
+      , activeValue = NoValue
       }
     , Cmd.none
     )
 
 
 type Msg
-    = UpdateHoverLinesPosition SvgMouseCoordinate
-    | HideHoverLines
+    = UpdateMousePosition (Maybe MousePosition)
     | AddAdjustPoint
+    | SelectAdjustPoint RoastCurve.Value
+    | DeselectSelectedAdjustPoint
+    | DragStartAdjustPoint RoastCurve.Value
+    | StopDraggingAdjustPoint RoastCurve.Value
+    | DeleteSelectedValue
 
 
-type alias HoverLinesPosition =
-    { horizontal : Float
-    , vertical : Float
+type alias MousePosition =
+    { cx : Float
+    , cy : Float
     }
 
 
 type alias Model =
-    { hoverLinesPosition : Maybe HoverLinesPosition
-    , curveValues : List ( Float, Float )
+    { mousePosition : Maybe MousePosition
+    , curveValues : RoastCurve.CurveValues
+    , activeValue : ActiveValue
     }
 
 
 update : Msg -> Model -> ( Model, Cmd cmd )
 update msg model =
     case msg of
-        UpdateHoverLinesPosition { x, y } ->
+        UpdateMousePosition newMousePosition ->
             let
-                hoverLinesPosition =
-                    { horizontal = x
-                    , vertical = y
-                    }
-            in
-            ( { model | hoverLinesPosition = Just hoverLinesPosition }, Cmd.none )
+                updatedCurveValues =
+                    case ( model.mousePosition, model.activeValue ) of
+                        ( Just { cx, cy }, Dragging value ) ->
+                            let
+                                ( timeScale, valueScale ) =
+                                    getScales model.curveValues
 
-        HideHoverLines ->
-            ( { model | hoverLinesPosition = Nothing }, Cmd.none )
+                                updatedAdjustPoint =
+                                    ( Scale.invert timeScale cx
+                                    , Scale.invert valueScale cy
+                                    )
+                            in
+                            RoastCurve.updateValue model.curveValues value updatedAdjustPoint
+
+                        _ ->
+                            model.curveValues
+            in
+            ( { model
+                | mousePosition = newMousePosition
+                , curveValues = updatedCurveValues
+              }
+            , Cmd.none
+            )
 
         AddAdjustPoint ->
-            let
-                newCurveValue =
-                    case model.hoverLinesPosition of
-                        Just { horizontal, vertical } ->
-                            ( horizontal * 1000, vertical )
+            case model.mousePosition of
+                Just { cx, cy } ->
+                    let
+                        ( timeScale, valueScale ) =
+                            getScales model.curveValues
 
-                        Nothing ->
-                            ( 400000, 420 )
+                        newCurveValue =
+                            ( Scale.invert timeScale cx
+                            , Scale.invert valueScale cy
+                            )
 
-                newCurveValues =
-                    [ newCurveValue ]
-                        |> List.append model.curveValues
-                        |> List.sortBy Tuple.first
-            in
-            ( { model | curveValues = newCurveValues }, Cmd.none )
+                        ( updatedCurveValues, newValue ) =
+                            RoastCurve.insertValue model.curveValues newCurveValue
+                    in
+                    ( { model
+                        | curveValues = updatedCurveValues
+                        , activeValue = Selected newValue
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        SelectAdjustPoint value ->
+            ( { model | activeValue = Dragging value }, Cmd.none )
+
+        DeselectSelectedAdjustPoint ->
+            ( { model | activeValue = NoValue }, Cmd.none )
+
+        DragStartAdjustPoint value ->
+            ( { model | activeValue = Dragging value }, Cmd.none )
+
+        StopDraggingAdjustPoint value ->
+            ( { model | activeValue = Selected value }, Cmd.none )
+
+        DeleteSelectedValue ->
+            case model.activeValue of
+                Selected value ->
+                    let
+                        updatedCurveValues =
+                            RoastCurve.removeValue model.curveValues value
+                    in
+                    ( { model
+                        | curveValues = updatedCurveValues
+                        , activeValue = NoValue
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 outerWidth : Float
@@ -124,11 +188,17 @@ innerWidth =
     outerWidth - margin * 2.0
 
 
-view : Model -> Html Msg
+view : Model -> Html.Html Msg
 view model =
-    div []
+    Html.div []
         [ viewSvg model
-        , text <| Debug.toString model
+        , Html.button
+            [ HE.onClick DeleteSelectedValue
+            ]
+            [ Html.text "Delete selected" ]
+        , Html.div [ SvgAttr.style "width: 900px" ]
+            [ Html.text <| Debug.toString model
+            ]
         ]
 
 
@@ -137,201 +207,201 @@ transparentColor =
     Color.fromRgba { red = 0.0, blue = 0.0, green = 0.0, alpha = 0.0 }
 
 
-viewSvg : Model -> Html Msg
+viewSvg : Model -> Html.Html Msg
 viewSvg model =
     let
-        minValue : Float
-        minValue =
-            model.curveValues
-                |> List.map Tuple.second
-                |> List.minimum
-                |> Maybe.withDefault 0.0
+        ( timeScale, temperatureScale ) =
+            getScales model.curveValues
 
-        maxValue : Float
-        maxValue =
-            model.curveValues
-                |> List.map Tuple.second
-                |> List.maximum
-                |> Maybe.withDefault 0.0
-
-        minTime : Float
-        minTime =
-            model.curveValues
-                |> List.map Tuple.first
-                |> List.minimum
-                |> Maybe.withDefault 0.0
-
-        maxTime : Float
-        maxTime =
-            model.curveValues
-                |> List.map Tuple.first
-                |> List.maximum
-                |> Maybe.withDefault 0.0
-
-        timeScale : Scale.ContinuousScale Float
-        timeScale =
-            Scale.linear ( 0.0, innerWidth ) ( minTime, maxTime )
-
-        valueScale : Scale.ContinuousScale Float
-        valueScale =
-            Scale.linear ( innerHeight, 0.0 ) ( minValue, maxValue )
-
-        adjustPoints : List ( Float, Float )
-        adjustPoints =
-            model.curveValues
+        svgPoints : List ( RoastCurve.Value, RoastCurve.RawValue )
+        svgPoints =
+            RoastCurve.toList model.curveValues
                 |> List.map
-                    (\( time, value ) ->
-                        ( Scale.convert timeScale time
-                        , Scale.convert valueScale value
+                    (\v ->
+                        ( v
+                        , ( Scale.convert timeScale (RoastCurve.timeFor v)
+                          , Scale.convert temperatureScale (RoastCurve.temperatureFor v)
+                          )
                         )
                     )
     in
     svg
-        [ class [ "ce-pe-all" ]
-        , TypedSvg.Attributes.width <| percent 100
-        , preserveAspectRatio (Align ScaleMid ScaleMin) Slice
-        , viewBox 0 0 outerWidth outerHeight
+        [ SvgAttr.width <| SvgTypes.percent 100
+        , SvgAttr.preserveAspectRatio (SvgTypes.Align SvgTypes.ScaleMid SvgTypes.ScaleMin) SvgTypes.Slice
+        , SvgAttr.viewBox 0 0 outerWidth outerHeight
         ]
         [ g
-            [ transform [ Translate margin margin ]
+            [ SvgAttr.transform [ SvgTypes.Translate margin margin ]
             ]
             [ -- lines area group
               g
-                [ class [ "ce-pe-all" ]
-                , onMouseLeave HideHoverLines
+                [ SvgAttr.style "pointer-events: all;"
                 ]
                 [ -- The above <g> element doesn't catch mouse events.
                   -- That's why we need this rectangle to fill the inner
                   -- space to trigger mouse events
                   rect
-                    [ class [ "ce-pe-all" ]
-                    , width innerWidth
-                    , height innerHeight
-                    , fill <| Fill transparentColor
-                    , onSvgMouseMove UpdateHoverLinesPosition
-                    , TypedSvg.Events.onClick AddAdjustPoint
+                    [ SvgAttr.style "pointer-events: all;"
+                    , TypedSvg.Attributes.InPx.width innerWidth
+                    , TypedSvg.Attributes.InPx.height innerHeight
+                    , SvgAttr.fill <| SvgTypes.Fill transparentColor
+                    , onSvgMouseMove UpdateMousePosition
+                    , TypedSvg.Events.onMouseLeave (UpdateMousePosition Nothing)
+                    , onDoubleClick AddAdjustPoint
+                    , TypedSvg.Events.onClick DeselectSelectedAdjustPoint
                     ]
                     []
-                , viewHoverLines model.hoverLinesPosition
-                , viewPath adjustPoints timeScale valueScale
-                , viewAdjustPoints adjustPoints
                 , g
-                    [ transform [ Translate 0 innerHeight ]
+                    [ SvgAttr.transform [ SvgTypes.Translate 0 innerHeight ]
                     ]
                     [ Axis.bottom [ Axis.tickCount 10 ] timeScale
                     ]
                 , g
-                    [ transform [ Translate 0 0 ]
+                    [ SvgAttr.transform [ SvgTypes.Translate 0 0 ]
                     ]
-                    [ Axis.left [ Axis.tickCount 10 ] valueScale
+                    [ Axis.left [ Axis.tickCount 10 ] temperatureScale
                     ]
+                , viewHoverLines model.mousePosition
+                , viewPath svgPoints
+                , viewAdjustPoints model.activeValue svgPoints
                 ]
             ]
         ]
 
 
-viewPath curveValues timeScale valueScale =
+viewPath : SvgPoints -> TypedSvg.Core.Svg Msg
+viewPath svgPoints =
     let
-        linePath : SubPath
+        linePath : SubPath.SubPath
         linePath =
-            Shape.catmullRomCurve 0.4 curveValues
+            Shape.catmullRomCurve 0.4 (List.map Tuple.second svgPoints)
     in
     SubPath.element linePath
-        [ class [ "ce-pe-none" ]
-        , style "pointer-events: none"
-        , stroke Color.blue
-        , strokeWidth <| px 2
-        , fill FillNone
+        [ SvgAttr.style "pointer-events: none"
+        , SvgAttr.stroke Color.blue
+        , SvgAttr.strokeWidth <| SvgTypes.px 2
+        , SvgAttr.fill SvgTypes.FillNone
         ]
 
 
-viewAdjustPoints curveValues =
-    g []
-        (curveValues
-            |> List.map
-                (\( coordinateX, coordinateY ) ->
-                    circle
-                        [ class [ "ce-pe-none" ]
-                        , cx <| px coordinateX
-                        , cy <| px coordinateY
-                        , r <| px 5
-                        , style "pointer-events: none"
-                        , stroke Color.blue
-                        , strokeWidth <| px 2
-                        , fill FillNone
-                        ]
-                        []
-                )
-        )
+type alias SvgPoints =
+    List ( RoastCurve.Value, RoastCurve.RawValue )
 
 
-viewHoverLines : Maybe HoverLinesPosition -> Html msg
-viewHoverLines hoverLinesPosition =
-    case hoverLinesPosition of
+viewAdjustPoints : ActiveValue -> SvgPoints -> TypedSvg.Core.Svg Msg
+viewAdjustPoints activeValue svgPoints =
+    let
+        circles =
+            svgPoints
+                |> List.map
+                    (\( value, ( coordinateX, coordinateY ) ) ->
+                        let
+                            isSelected =
+                                activeValue == Selected value || activeValue == Dragging value
+                        in
+                        circle
+                            [ SvgAttr.cx <| SvgTypes.px coordinateX
+                            , SvgAttr.cy <| SvgTypes.px coordinateY
+                            , SvgAttr.r <| SvgTypes.px 5
+                            , SvgAttr.style "pointer-events: all"
+                            , SvgAttr.stroke Color.blue
+                            , SvgAttr.strokeWidth <| SvgTypes.px 2
+                            , SvgAttr.fill
+                                (if isSelected then
+                                    SvgTypes.Fill Color.green
+
+                                 else
+                                    SvgTypes.Fill Color.white
+                                )
+                            , TypedSvg.Events.onMouseDown (SelectAdjustPoint value)
+                            , TypedSvg.Events.onMouseUp (StopDraggingAdjustPoint value)
+                            , onSvgMouseMove UpdateMousePosition
+                            ]
+                            []
+                    )
+    in
+    g [] circles
+
+
+viewHoverLines : Maybe MousePosition -> Html.Html msg
+viewHoverLines mousePosition =
+    case mousePosition of
         Nothing ->
-            text ""
+            Html.text ""
 
         Just position ->
             g []
                 [ -- horizontal line
                   line
-                    [ x1 <| px 0
-                    , x2 <| px innerWidth
-                    , y1 <| px position.vertical
-                    , y2 <| px position.vertical
-                    , style "pointer-events: none"
-                    , class [ "ce-pe-none" ]
-                    , strokeWidth <| px 2
-                    , stroke Color.black
-                    , opacity <| Opacity 0.1
+                    [ SvgAttr.x1 <| SvgTypes.px 0
+                    , SvgAttr.x2 <| SvgTypes.px innerWidth
+                    , SvgAttr.y1 <| SvgTypes.px position.cy
+                    , SvgAttr.y2 <| SvgTypes.px position.cy
+                    , SvgAttr.style "pointer-events: none"
+                    , SvgAttr.strokeWidth <| SvgTypes.px 2
+                    , SvgAttr.stroke Color.black
+                    , SvgAttr.opacity <| SvgTypes.Opacity 0.1
                     ]
                     []
 
                 -- vertical line
                 , line
-                    [ x1 <| px position.horizontal
-                    , x2 <| px position.horizontal
-                    , y1 <| px 0
-                    , y2 <| px innerHeight
-                    , style "pointer-events: none"
-                    , class [ "ce-pe-none" ]
-                    , strokeWidth <| px 2
-                    , stroke Color.black
-                    , opacity <| Opacity 0.1
+                    [ SvgAttr.x1 <| SvgTypes.px position.cx
+                    , SvgAttr.x2 <| SvgTypes.px position.cx
+                    , SvgAttr.y1 <| SvgTypes.px 0
+                    , SvgAttr.y2 <| SvgTypes.px innerHeight
+                    , SvgAttr.style "pointer-events: none"
+                    , SvgAttr.strokeWidth <| SvgTypes.px 2
+                    , SvgAttr.stroke Color.black
+                    , SvgAttr.opacity <| SvgTypes.Opacity 0.1
                     ]
                     []
                 ]
+
+
+
+-- GRAPH HELPER FUNCTIONS
+
+
+getScales : RoastCurve.CurveValues -> ( Scale.ContinuousScale Float, Scale.ContinuousScale Float )
+getScales curveValues =
+    let
+        xScale : Scale.ContinuousScale Float
+        xScale =
+            Scale.linear
+                ( 0.0, innerWidth )
+                ( RoastCurve.minTime curveValues, RoastCurve.maxTime curveValues )
+
+        yScale : Scale.ContinuousScale Float
+        yScale =
+            Scale.linear
+                ( innerHeight, 0.0 )
+                ( RoastCurve.minValue curveValues, RoastCurve.maxValue curveValues )
+    in
+    ( xScale, yScale )
 
 
 
 -- HELPER FUNCTIONS
 
 
+{-| Handler for native browser 'dblclick' event
+-}
+onDoubleClick : msg -> Svg.Attribute msg
+onDoubleClick message =
+    Svg.Events.on "dblclick" (Decode.succeed message)
+
+
+{-| Custom event defined in the index.js
+-}
+onSvgMouseMove : (Maybe MousePosition -> msg) -> Svg.Attribute msg
 onSvgMouseMove message =
-    Svg.Events.on "mousemoveWithCoordinates" (Decode.map message decodeSvgMouseCoordinate)
+    Svg.Events.on "mouseMoveWithCoordinates" (Decode.map message decodeMousePosition)
 
 
-type alias SvgMouseCoordinate =
-    { x : Float
-    , y : Float
-    }
-
-
-decodeSvgMouseCoordinate : Decode.Decoder SvgMouseCoordinate
-decodeSvgMouseCoordinate =
-    Decode.map2 SvgMouseCoordinate
-        (Decode.at [ "detail", "x" ] Decode.float)
-        (Decode.at [ "detail", "y" ] Decode.float)
-
-
-
--- HELPER DATA
-
-
-generateBeanTemperatureCurve : Int -> List ( Float, Float )
-generateBeanTemperatureCurve duration =
-    [ ( 0.0, 440.0 )
-    , ( toFloat duration * 0.15, 380.0 )
-    , ( toFloat duration * 0.65, 442.0 )
-    , ( toFloat duration, 455.0 )
-    ]
+decodeMousePosition : Decode.Decoder (Maybe MousePosition)
+decodeMousePosition =
+    Decode.maybe <|
+        Decode.map2 MousePosition
+            (Decode.at [ "detail", "x" ] Decode.float)
+            (Decode.at [ "detail", "y" ] Decode.float)

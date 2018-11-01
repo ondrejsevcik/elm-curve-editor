@@ -1,6 +1,4 @@
-import './main.css';
 import {Elm} from './Main.elm';
-import registerServiceWorker from './registerServiceWorker';
 
 var app = Elm.Main.init({
   node: document.getElementById('root'),
@@ -16,7 +14,7 @@ svg.addEventListener('mousemove', e => {
   point.y = e.clientY;
   let position = point.matrixTransform(targetElement.getScreenCTM().inverse());
 
-  let event = new CustomEvent('mousemoveWithCoordinates', {
+  let event = new CustomEvent('mouseMoveWithCoordinates', {
     detail: {
       x: position.x,
       y: position.y,
@@ -24,5 +22,3 @@ svg.addEventListener('mousemove', e => {
   });
   targetElement.dispatchEvent(event);
 });
-
-registerServiceWorker();
