@@ -103,6 +103,7 @@ update msg model =
             , Cmd.none
             )
 
+        -- TODO this should hold x,y pair from the mouse click
         AddAdjustPoint ->
             case model.mousePosition of
                 Just { cx, cy } ->
