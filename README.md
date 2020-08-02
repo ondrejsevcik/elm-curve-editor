@@ -1,4 +1,7 @@
 # elm-curve-editor
 
-Simple curve editor implemented in Elm.
+[[demo](https://ondrejsevcik.github.io/elm-curve-editor/)]
+
+Simple curve editor implemented in Elm (using pure svg).
+
 
