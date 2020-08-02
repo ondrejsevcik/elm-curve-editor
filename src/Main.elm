@@ -4,6 +4,7 @@ import Axis
 import Browser
 import Color
 import Html
+import Html.Attributes
 import Html.Events as HE
 import Json.Decode as Decode
 import RoastCurve
@@ -103,7 +104,6 @@ update msg model =
             , Cmd.none
             )
 
-        -- TODO this should hold x,y pair from the mouse click
         AddAdjustPoint ->
             case model.mousePosition of
                 Just { cx, cy } ->
@@ -193,11 +193,20 @@ view : Model -> Html.Html Msg
 view model =
     Html.div []
         [ viewSvg model
-        , Html.button
-            [ HE.onClick DeleteSelectedValue
+        , Html.div
+            []
+            [ Html.button
+                [ HE.onClick DeleteSelectedValue
+                , Html.Attributes.disabled (model.activeValue == NoValue)
+                ]
+                [ Html.text "Delete selected" ]
+            , Html.span
+                [ SvgAttr.style "margin-left: 1rem" ]
+                [ Html.text "Tip: double click to add new point" ]
             ]
-            [ Html.text "Delete selected" ]
-        , Html.div [ SvgAttr.style "width: 900px" ]
+        , Html.div
+            [ SvgAttr.style "max-width:48rem; background:beige; padding:1rem;"
+            ]
             [ Html.text <| Debug.toString model
             ]
         ]
