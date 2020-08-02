@@ -1,4 +1,4 @@
-module RoastCurve exposing
+module SvgCurve exposing
     ( CurveValues(..)
     , RawValue
     , Value(..)

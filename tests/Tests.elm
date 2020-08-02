@@ -1,7 +1,7 @@
 module Tests exposing (all)
 
 import Expect
-import RoastCurve
+import SvgCurve
 import Test exposing (..)
 
 
@@ -12,7 +12,7 @@ all =
     -- values must have at least two points at all times
     -- last item can't be removed
     -- first item can't be removed
-    describe "RoastCurve module"
+    describe "SvgCurve module"
         [ describe "Curve tests"
             [ test "getNewId" <|
                 \_ ->
@@ -21,8 +21,8 @@ all =
                     , ( 2.0, 2.0 )
                     , ( 3.0, 3.0 )
                     ]
-                        |> RoastCurve.newFromList
-                        |> RoastCurve.getNewId
+                        |> SvgCurve.newFromList
+                        |> SvgCurve.getNewId
                         |> Expect.equal 4
             ]
         ]

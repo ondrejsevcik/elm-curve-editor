@@ -7,7 +7,7 @@ import Html
 import Html.Attributes
 import Html.Events as HE
 import Json.Decode as Decode
-import RoastCurve
+import SvgCurve
 import Scale
 import Shape
 import SubPath
@@ -37,15 +37,15 @@ subscriptions model =
 
 
 type ActiveValue
-    = Selected RoastCurve.Value
-    | Dragging RoastCurve.Value
+    = Selected SvgCurve.Value
+    | Dragging SvgCurve.Value
     | NoValue
 
 
 init : Decode.Value -> ( Model, Cmd msg )
 init flags =
     ( { mousePosition = Nothing
-      , curveValues = RoastCurve.newFromDuration 900000
+      , curveValues = SvgCurve.newFromDuration 900000
       , activeValue = NoValue
       }
     , Cmd.none
@@ -55,10 +55,10 @@ init flags =
 type Msg
     = UpdateMousePosition (Maybe MousePosition)
     | AddAdjustPoint
-    | SelectAdjustPoint RoastCurve.Value
+    | SelectAdjustPoint SvgCurve.Value
     | DeselectSelectedAdjustPoint
-    | DragStartAdjustPoint RoastCurve.Value
-    | StopDraggingAdjustPoint RoastCurve.Value
+    | DragStartAdjustPoint SvgCurve.Value
+    | StopDraggingAdjustPoint SvgCurve.Value
     | DeleteSelectedValue
 
 
@@ -70,7 +70,7 @@ type alias MousePosition =
 
 type alias Model =
     { mousePosition : Maybe MousePosition
-    , curveValues : RoastCurve.CurveValues
+    , curveValues : SvgCurve.CurveValues
     , activeValue : ActiveValue
     }
 
@@ -92,7 +92,7 @@ update msg model =
                                     , Scale.invert valueScale cy
                                     )
                             in
-                            RoastCurve.updateValue model.curveValues value updatedAdjustPoint
+                            SvgCurve.updateValue model.curveValues value updatedAdjustPoint
 
                         _ ->
                             model.curveValues
@@ -117,7 +117,7 @@ update msg model =
                             )
 
                         ( updatedCurveValues, newValue ) =
-                            RoastCurve.insertValue model.curveValues newCurveValue
+                            SvgCurve.insertValue model.curveValues newCurveValue
                     in
                     ( { model
                         | curveValues = updatedCurveValues
@@ -146,7 +146,7 @@ update msg model =
                 Selected value ->
                     let
                         updatedCurveValues =
-                            RoastCurve.removeValue model.curveValues value
+                            SvgCurve.removeValue model.curveValues value
                     in
                     ( { model
                         | curveValues = updatedCurveValues
@@ -223,14 +223,14 @@ viewSvg model =
         ( timeScale, temperatureScale ) =
             getScales model.curveValues
 
-        svgPoints : List ( RoastCurve.Value, RoastCurve.RawValue )
+        svgPoints : List ( SvgCurve.Value, SvgCurve.RawValue )
         svgPoints =
-            RoastCurve.toList model.curveValues
+            SvgCurve.toList model.curveValues
                 |> List.map
                     (\v ->
                         ( v
-                        , ( Scale.convert timeScale (RoastCurve.timeFor v)
-                          , Scale.convert temperatureScale (RoastCurve.temperatureFor v)
+                        , ( Scale.convert timeScale (SvgCurve.timeFor v)
+                          , Scale.convert temperatureScale (SvgCurve.temperatureFor v)
                           )
                         )
                     )
@@ -296,7 +296,7 @@ viewPath svgPoints =
 
 
 type alias SvgPoints =
-    List ( RoastCurve.Value, RoastCurve.RawValue )
+    List ( SvgCurve.Value, SvgCurve.RawValue )
 
 
 viewAdjustPoints : ActiveValue -> SvgPoints -> TypedSvg.Core.Svg Msg
@@ -374,20 +374,20 @@ viewHoverLines mousePosition =
 -- GRAPH HELPER FUNCTIONS
 
 
-getScales : RoastCurve.CurveValues -> ( Scale.ContinuousScale Float, Scale.ContinuousScale Float )
+getScales : SvgCurve.CurveValues -> ( Scale.ContinuousScale Float, Scale.ContinuousScale Float )
 getScales curveValues =
     let
         xScale : Scale.ContinuousScale Float
         xScale =
             Scale.linear
                 ( 0.0, innerWidth )
-                ( RoastCurve.minTime curveValues, RoastCurve.maxTime curveValues )
+                ( SvgCurve.minTime curveValues, SvgCurve.maxTime curveValues )
 
         yScale : Scale.ContinuousScale Float
         yScale =
             Scale.linear
                 ( innerHeight, 0.0 )
-                ( RoastCurve.minValue curveValues, RoastCurve.maxValue curveValues )
+                ( SvgCurve.minValue curveValues, SvgCurve.maxValue curveValues )
     in
     ( xScale, yScale )
 

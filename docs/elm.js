@@ -5112,10 +5112,10 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $author$project$Main$NoValue = {$: 'NoValue'};
-var $author$project$RoastCurve$CurveValues = function (a) {
+var $author$project$SvgCurve$CurveValues = function (a) {
 	return {$: 'CurveValues', a: a};
 };
-var $author$project$RoastCurve$Value = function (a) {
+var $author$project$SvgCurve$Value = function (a) {
 	return {$: 'Value', a: a};
 };
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
@@ -5241,7 +5241,7 @@ var $elm$core$Dict$fromList = function (assocs) {
 		$elm$core$Dict$empty,
 		assocs);
 };
-var $author$project$RoastCurve$newFromDuration = function (duration) {
+var $author$project$SvgCurve$newFromDuration = function (duration) {
 	var initialValues = _List_fromArray(
 		[
 			{temperature: 440.0, time: 0.0},
@@ -5249,7 +5249,7 @@ var $author$project$RoastCurve$newFromDuration = function (duration) {
 			{temperature: 442.0, time: duration * 0.65},
 			{temperature: 455.0, time: duration}
 		]);
-	return $author$project$RoastCurve$CurveValues(
+	return $author$project$SvgCurve$CurveValues(
 		$elm$core$Dict$fromList(
 			A2(
 				$elm$core$List$indexedMap,
@@ -5257,7 +5257,7 @@ var $author$project$RoastCurve$newFromDuration = function (duration) {
 					function (index, value) {
 						return _Utils_Tuple2(
 							index,
-							$author$project$RoastCurve$Value(
+							$author$project$SvgCurve$Value(
 								{id: index, temperature: value.temperature, time: value.time}));
 					}),
 				initialValues)));
@@ -5268,7 +5268,7 @@ var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
 		{
 			activeValue: $author$project$Main$NoValue,
-			curveValues: $author$project$RoastCurve$newFromDuration(900000),
+			curveValues: $author$project$SvgCurve$newFromDuration(900000),
 			mousePosition: $elm$core$Maybe$Nothing
 		},
 		$elm$core$Platform$Cmd$none);
@@ -5541,7 +5541,7 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$RoastCurve$maxTime = function (_v0) {
+var $author$project$SvgCurve$maxTime = function (_v0) {
 	var curveValues = _v0.a;
 	return A2(
 		$elm$core$Maybe$withDefault,
@@ -5555,7 +5555,7 @@ var $author$project$RoastCurve$maxTime = function (_v0) {
 				},
 				$elm$core$Dict$values(curveValues))));
 };
-var $author$project$RoastCurve$maxValue = function (_v0) {
+var $author$project$SvgCurve$maxValue = function (_v0) {
 	var curveValues = _v0.a;
 	return A2(
 		$elm$core$Maybe$withDefault,
@@ -5583,7 +5583,7 @@ var $elm$core$List$minimum = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $author$project$RoastCurve$minTime = function (_v0) {
+var $author$project$SvgCurve$minTime = function (_v0) {
 	var curveValues = _v0.a;
 	return A2(
 		$elm$core$Maybe$withDefault,
@@ -5597,7 +5597,7 @@ var $author$project$RoastCurve$minTime = function (_v0) {
 				},
 				$elm$core$Dict$values(curveValues))));
 };
-var $author$project$RoastCurve$minValue = function (_v0) {
+var $author$project$SvgCurve$minValue = function (_v0) {
 	var curveValues = _v0.a;
 	return A2(
 		$elm$core$Maybe$withDefault,
@@ -5616,14 +5616,14 @@ var $author$project$Main$getScales = function (curveValues) {
 		$gampleman$elm_visualization$Scale$linear,
 		_Utils_Tuple2($author$project$Main$innerHeight, 0.0),
 		_Utils_Tuple2(
-			$author$project$RoastCurve$minValue(curveValues),
-			$author$project$RoastCurve$maxValue(curveValues)));
+			$author$project$SvgCurve$minValue(curveValues),
+			$author$project$SvgCurve$maxValue(curveValues)));
 	var xScale = A2(
 		$gampleman$elm_visualization$Scale$linear,
 		_Utils_Tuple2(0.0, $author$project$Main$innerWidth),
 		_Utils_Tuple2(
-			$author$project$RoastCurve$minTime(curveValues),
-			$author$project$RoastCurve$maxTime(curveValues)));
+			$author$project$SvgCurve$minTime(curveValues),
+			$author$project$SvgCurve$maxTime(curveValues)));
 	return _Utils_Tuple2(xScale, yScale);
 };
 var $elm$core$Dict$get = F2(
@@ -5678,7 +5678,7 @@ var $elm$core$Dict$sizeHelp = F2(
 var $elm$core$Dict$size = function (dict) {
 	return A2($elm$core$Dict$sizeHelp, 0, dict);
 };
-var $author$project$RoastCurve$getNewId = function (_v0) {
+var $author$project$SvgCurve$getNewId = function (_v0) {
 	var curveValues = _v0.a;
 	var lastId = A2(
 		$elm$core$Debug$log,
@@ -5692,7 +5692,7 @@ var $author$project$RoastCurve$getNewId = function (_v0) {
 		return 1;
 	}
 };
-var $author$project$RoastCurve$insertValue = F2(
+var $author$project$SvgCurve$insertValue = F2(
 	function (cv, _v0) {
 		var curveValues = cv.a;
 		var time = _v0.a;
@@ -5700,10 +5700,10 @@ var $author$project$RoastCurve$insertValue = F2(
 		var id = A2(
 			$elm$core$Debug$log,
 			'newId',
-			$author$project$RoastCurve$getNewId(cv));
-		var newValue = $author$project$RoastCurve$Value(
+			$author$project$SvgCurve$getNewId(cv));
+		var newValue = $author$project$SvgCurve$Value(
 			{id: id, temperature: temperature, time: time});
-		var updatedCurveValues = $author$project$RoastCurve$CurveValues(
+		var updatedCurveValues = $author$project$SvgCurve$CurveValues(
 			A3($elm$core$Dict$insert, id, newValue, curveValues));
 		return _Utils_Tuple2(updatedCurveValues, newValue);
 	});
@@ -6074,24 +6074,24 @@ var $elm$core$Dict$remove = F2(
 			return x;
 		}
 	});
-var $author$project$RoastCurve$removeValue = F2(
+var $author$project$SvgCurve$removeValue = F2(
 	function (_v0, _v1) {
 		var curveValues = _v0.a;
 		var id = _v1.a.id;
-		return $author$project$RoastCurve$CurveValues(
+		return $author$project$SvgCurve$CurveValues(
 			A2($elm$core$Dict$remove, id, curveValues));
 	});
-var $author$project$RoastCurve$updateValue = F3(
+var $author$project$SvgCurve$updateValue = F3(
 	function (_v0, currentValue, _v1) {
 		var curveValues = _v0.a;
 		var id = currentValue.a.id;
 		var time = _v1.a;
 		var temperature = _v1.b;
-		return $author$project$RoastCurve$CurveValues(
+		return $author$project$SvgCurve$CurveValues(
 			A3(
 				$elm$core$Dict$insert,
 				id,
-				$author$project$RoastCurve$Value(
+				$author$project$SvgCurve$Value(
 					{id: id, temperature: temperature, time: time}),
 				curveValues));
 	});
@@ -6112,7 +6112,7 @@ var $author$project$Main$update = F2(
 						var updatedAdjustPoint = _Utils_Tuple2(
 							A2($gampleman$elm_visualization$Scale$invert, timeScale, cx),
 							A2($gampleman$elm_visualization$Scale$invert, valueScale, cy));
-						return A3($author$project$RoastCurve$updateValue, model.curveValues, value, updatedAdjustPoint);
+						return A3($author$project$SvgCurve$updateValue, model.curveValues, value, updatedAdjustPoint);
 					} else {
 						return model.curveValues;
 					}
@@ -6133,7 +6133,7 @@ var $author$project$Main$update = F2(
 					var newCurveValue = _Utils_Tuple2(
 						A2($gampleman$elm_visualization$Scale$invert, timeScale, cx),
 						A2($gampleman$elm_visualization$Scale$invert, valueScale, cy));
-					var _v5 = A2($author$project$RoastCurve$insertValue, model.curveValues, newCurveValue);
+					var _v5 = A2($author$project$SvgCurve$insertValue, model.curveValues, newCurveValue);
 					var updatedCurveValues = _v5.a;
 					var newValue = _v5.b;
 					return _Utils_Tuple2(
@@ -6184,7 +6184,7 @@ var $author$project$Main$update = F2(
 				var _v6 = model.activeValue;
 				if (_v6.$ === 'Selected') {
 					var value = _v6.a;
-					var updatedCurveValues = A2($author$project$RoastCurve$removeValue, model.curveValues, value);
+					var updatedCurveValues = A2($author$project$SvgCurve$removeValue, model.curveValues, value);
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -6688,7 +6688,7 @@ var $elm_community$typed_svg$TypedSvg$Attributes$preserveAspectRatio = F2(
 	});
 var $elm_community$typed_svg$TypedSvg$rect = $elm_community$typed_svg$TypedSvg$Core$node('rect');
 var $elm_community$typed_svg$TypedSvg$svg = $elm_community$typed_svg$TypedSvg$Core$node('svg');
-var $author$project$RoastCurve$temperatureFor = function (_v0) {
+var $author$project$SvgCurve$temperatureFor = function (_v0) {
 	var v = _v0.a;
 	return v.temperature;
 };
@@ -6696,12 +6696,12 @@ var $gampleman$elm_visualization$Axis$TickCount = function (a) {
 	return {$: 'TickCount', a: a};
 };
 var $gampleman$elm_visualization$Axis$tickCount = $gampleman$elm_visualization$Axis$TickCount;
-var $author$project$RoastCurve$timeFor = function (_v0) {
+var $author$project$SvgCurve$timeFor = function (_v0) {
 	var v = _v0.a;
 	return v.time;
 };
 var $elm$core$List$sortBy = _List_sortBy;
-var $author$project$RoastCurve$toList = function (_v0) {
+var $author$project$SvgCurve$toList = function (_v0) {
 	var curveValues = _v0.a;
 	return A2(
 		$elm$core$List$sortBy,
@@ -8173,13 +8173,13 @@ var $author$project$Main$viewSvg = function (model) {
 					A2(
 						$gampleman$elm_visualization$Scale$convert,
 						timeScale,
-						$author$project$RoastCurve$timeFor(v)),
+						$author$project$SvgCurve$timeFor(v)),
 					A2(
 						$gampleman$elm_visualization$Scale$convert,
 						temperatureScale,
-						$author$project$RoastCurve$temperatureFor(v))));
+						$author$project$SvgCurve$temperatureFor(v))));
 		},
-		$author$project$RoastCurve$toList(model.curveValues));
+		$author$project$SvgCurve$toList(model.curveValues));
 	return A2(
 		$elm_community$typed_svg$TypedSvg$svg,
 		_List_fromArray(
