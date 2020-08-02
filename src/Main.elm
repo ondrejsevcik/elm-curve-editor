@@ -228,6 +228,7 @@ viewSvg model =
     in
     svg
         [ SvgAttr.width <| SvgTypes.percent 100
+        , SvgAttr.style ("max-width:900px")
         , SvgAttr.preserveAspectRatio (SvgTypes.Align SvgTypes.ScaleMid SvgTypes.ScaleMin) SvgTypes.Slice
         , SvgAttr.viewBox 0 0 outerWidth outerHeight
         ]
